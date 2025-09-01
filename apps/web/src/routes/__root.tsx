@@ -9,9 +9,12 @@ import {
 	useRouterState,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import { QueryClient } from "@tanstack/react-query";
 import "../index.css";
 
-export interface RouterAppContext {}
+export interface RouterAppContext {
+	queryClient: QueryClient;
+}
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
 	component: RootComponent,
@@ -52,7 +55,6 @@ function RootComponent() {
 					<Header />
 					{isFetching ? <Loader /> : <Outlet />}
 				</div>
-				<Toaster richColors />
 			</ThemeProvider>
 			<TanStackRouterDevtools position="bottom-left" />
 		</>
