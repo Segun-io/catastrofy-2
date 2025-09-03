@@ -18,7 +18,7 @@ import { Link } from "@tanstack/react-router";
 function HomeComponent() {
 	return (
 		<div className="container mx-auto max-w-3xl px-4 py-2">
-			<pre className="overflow-x-auto font-mono text-sm">{TITLE_TEXT}</pre>
+			<pre className="overflow-x-auto font-mono text-xs sm:text-sm whitespace-pre-wrap break-all">{TITLE_TEXT}</pre>
 			<div className="grid gap-6">
 				<section className="rounded-lg border p-4">
 					<h2 className="mb-2 font-medium">Bienvenido a Catastrofy 2</h2>
