@@ -21,17 +21,17 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 	head: () => ({
 		meta: [
 			{
-				title: "catastrofy-2",
+				title: "Catastrofy - Utilidades Financieras",
 			},
 			{
 				name: "description",
-				content: "catastrofy-2 is a web application",
+				content: "Catastrofy 2 - Suite de calculadoras financieras para decisiones informadas sobre tarjetas de crédito e hipotecas",
 			},
 		],
 		links: [
 			{
 				rel: "icon",
-				href: "/favicon.ico",
+				href: "/favicon.svg",
 			},
 		],
 	}),
