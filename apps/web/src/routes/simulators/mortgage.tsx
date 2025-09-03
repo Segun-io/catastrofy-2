@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { useAddMortgageCalculation, useCurrentMortgageCalculation, useMortgageCalculation } from '../../hooks/useMortgageCalculations';
+import { useAddMortgageCalculation, useCurrentMortgageCalculation, useMortgageCalculation, useUpdateMortgageCalculation } from '../../hooks/useMortgageCalculations';
 import { MortgageForm } from '../../components/mortgage-form';
 import { MortgageResults } from '../../components/mortgage-results';
 import { MortgageHistory } from '../../components/mortgage-history';
@@ -16,6 +16,7 @@ export function MortgagePage() {
   const [selectedCalculationId, setSelectedCalculationId] = useState<string | undefined>();
   
   const addCalculation = useAddMortgageCalculation();
+  const updateCalculation = useUpdateMortgageCalculation();
   const { data: currentCalculation } = useCurrentMortgageCalculation();
   const { data: selectedCalculation } = useMortgageCalculation(selectedCalculationId || '');
 
@@ -57,6 +58,23 @@ export function MortgagePage() {
     setSelectedPresetId(presetId);
   };
 
+  const handleRecalculate = (newResult: MortgageCalculationResult) => {
+    if (!selectedCalculationId) return;
+    
+    updateCalculation.mutate({
+      id: selectedCalculationId,
+      updates: newResult
+    }, {
+      onSuccess: () => {
+        toast.success('Pagos anticipados guardados y cronograma actualizado');
+      },
+      onError: (error) => {
+        toast.error('Error al guardar los pagos anticipados');
+        console.error('Error updating calculation:', error);
+      }
+    });
+  };
+
   // Get the calculation to display (selected or current)
   const displayCalculation = selectedCalculation || currentCalculation;
 
@@ -84,6 +102,7 @@ export function MortgagePage() {
           <MortgageResults
             result={displayCalculation || null}
             isLoading={addCalculation.isPending}
+            onRecalculate={handleRecalculate}
           />
         </div>
 

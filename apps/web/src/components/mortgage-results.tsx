@@ -4,7 +4,9 @@ import { Badge } from './ui/badge';
 import { Alert, AlertDescription } from './ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Button } from './ui/button';
-import type { MortgageCalculationResult, AmortizationRow } from '../lib/types/mortgage';
+import { Input } from './ui/input';
+import type { MortgageCalculationResult, AmortizationRow, Prepayment } from '../lib/types/mortgage';
+import { computeMortgage } from '../lib/mortgageMath';
 import { 
   AlertTriangle, 
   Info, 
@@ -19,15 +21,20 @@ import {
   Target,
   Building,
   FileText,
-  Settings
+  Settings,
+  Edit3,
+  RotateCcw,
+  Check,
+  X
 } from 'lucide-react';
 
 interface MortgageResultsProps {
   result: MortgageCalculationResult | null;
   isLoading?: boolean;
+  onRecalculate?: (newResult: MortgageCalculationResult) => void;
 }
 
-export function MortgageResults({ result, isLoading }: MortgageResultsProps) {
+export function MortgageResults({ result, isLoading, onRecalculate }: MortgageResultsProps) {
   if (isLoading) {
     return (
       <Card className="w-full">
@@ -59,6 +66,42 @@ export function MortgageResults({ result, isLoading }: MortgageResultsProps) {
   }
 
   const { rows, totals, input } = result;
+
+  const handlePrepaymentChange = React.useCallback((month: number, amount: number) => {
+    if (!result || !onRecalculate) return;
+
+    // Create new prepayments array with the updated amount
+    const existingPrepayments = input.prepayments || [];
+    const updatedPrepayments = existingPrepayments.filter(p => p.month !== month);
+    
+    if (amount > 0) {
+      updatedPrepayments.push({ month, amount });
+    }
+
+    // Sort prepayments by month
+    updatedPrepayments.sort((a, b) => a.month - b.month);
+
+    // Create new input with updated prepayments
+    const newInput = {
+      ...input,
+      prepayments: updatedPrepayments
+    };
+
+    // Recalculate the mortgage
+    const newResult = computeMortgage(newInput);
+    
+    // Create new calculation result with updated timestamp
+    const newCalculationResult: MortgageCalculationResult = {
+      ...result,
+      input: newResult.input,
+      rows: newResult.rows,
+      totals: newResult.totals,
+      createdAt: new Date().toISOString() // Update timestamp to reflect changes
+    };
+
+    // Persist the changes
+    onRecalculate(newCalculationResult);
+  }, [result, input, onRecalculate]);
 
   return (
     <div className="space-y-8">
@@ -320,7 +363,10 @@ export function MortgageResults({ result, isLoading }: MortgageResultsProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <PaymentScheduleTable rows={rows} />
+            <PaymentScheduleTable 
+              rows={rows} 
+              onPrepaymentChange={handlePrepaymentChange}
+            />
           </CardContent>
         </Card>
       </div>
@@ -329,11 +375,124 @@ export function MortgageResults({ result, isLoading }: MortgageResultsProps) {
   );
 }
 
-function PaymentScheduleTable({ rows }: { rows: AmortizationRow[] }) {
+function PaymentScheduleTable({ 
+  rows, 
+  onPrepaymentChange 
+}: { 
+  rows: AmortizationRow[];
+  onPrepaymentChange?: (month: number, amount: number) => void;
+}) {
   const [displayRows, setDisplayRows] = React.useState(12);
   const [showAll, setShowAll] = React.useState(false);
+  const [editingPrepayment, setEditingPrepayment] = React.useState<number | null>(null);
+  const [prepaymentValues, setPrepaymentValues] = React.useState<Record<number, string>>({});
+  const [copiedMonth, setCopiedMonth] = React.useState<number | null>(null);
+  const [savingMonth, setSavingMonth] = React.useState<number | null>(null);
 
   const visibleRows = showAll ? rows : rows.slice(0, displayRows);
+
+  // Sync local prepayment values with actual data when rows change
+  React.useEffect(() => {
+    const newPrepaymentValues: Record<number, string> = {};
+    rows.forEach(row => {
+      if (row.prepayment > 0) {
+        newPrepaymentValues[row.month] = row.prepayment.toString();
+      } else {
+        // Set empty string for zero values to avoid leading zeros
+        newPrepaymentValues[row.month] = '';
+      }
+    });
+    setPrepaymentValues(prev => ({ ...prev, ...newPrepaymentValues }));
+  }, [rows]);
+
+  const handlePrepaymentInputChange = (month: number, value: string) => {
+    setPrepaymentValues(prev => ({
+      ...prev,
+      [month]: value
+    }));
+  };
+
+  const handlePrepaymentBlur = (month: number) => {
+    const value = prepaymentValues[month] || '';
+    const numericValue = parseFloat(value) || 0;
+    
+    // Validation: ensure the prepayment doesn't exceed the remaining balance
+    const currentRow = rows.find(r => r.month === month);
+    if (currentRow && numericValue > currentRow.closingBalance) {
+      // Reset to 0 if prepayment exceeds balance
+      setPrepaymentValues(prev => ({
+        ...prev,
+        [month]: ''
+      }));
+      if (onPrepaymentChange) {
+        setSavingMonth(month);
+        onPrepaymentChange(month, 0);
+        setTimeout(() => setSavingMonth(null), 1000);
+      }
+    } else if (onPrepaymentChange) {
+      setSavingMonth(month);
+      onPrepaymentChange(month, numericValue);
+      setTimeout(() => setSavingMonth(null), 1000);
+    }
+    
+    setEditingPrepayment(null);
+  };
+
+  const handlePrepaymentFocus = (month: number) => {
+    setEditingPrepayment(month);
+    const currentRow = rows.find(r => r.month === month);
+    const currentValue = currentRow?.prepayment || 0;
+    
+    // Always set the current value, don't rely on cached values
+    setPrepaymentValues(prev => ({
+      ...prev,
+      [month]: currentValue === 0 ? '' : currentValue.toString()
+    }));
+  };
+
+  const handleCopyFromPrevious = (month: number) => {
+    const currentIndex = rows.findIndex(r => r.month === month);
+    if (currentIndex > 0) {
+      const previousRow = rows[currentIndex - 1];
+      const previousAmount = previousRow.prepayment;
+      
+      // Update the input value if currently editing
+      if (editingPrepayment === month) {
+        setPrepaymentValues(prev => ({
+          ...prev,
+          [month]: previousAmount.toString()
+        }));
+      } else {
+        // Apply the prepayment directly
+        if (onPrepaymentChange) {
+          setSavingMonth(month);
+          onPrepaymentChange(month, previousAmount);
+          setTimeout(() => setSavingMonth(null), 1000);
+        }
+      }
+      
+      // Show success feedback
+      setCopiedMonth(month);
+      setTimeout(() => setCopiedMonth(null), 1000);
+    }
+  };
+
+  const handleSetToZero = (month: number) => {
+    // Update the input value if currently editing
+    if (editingPrepayment === month) {
+      setPrepaymentValues(prev => ({
+        ...prev,
+        [month]: ''
+      }));
+    } else {
+      // Apply the zero prepayment directly
+      if (onPrepaymentChange) {
+        setSavingMonth(month);
+        onPrepaymentChange(month, 0);
+        setTimeout(() => setSavingMonth(null), 1000);
+      }
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -372,13 +531,17 @@ function PaymentScheduleTable({ rows }: { rows: AmortizationRow[] }) {
               <TableRow className="border-gray-700">
                 <TableHead className="font-semibold text-gray-100">Pago</TableHead>
                 <TableHead className="font-semibold text-gray-100">Saldo Insoluto</TableHead>
+                <TableHead className="font-semibold text-gray-100 flex items-center gap-2">
+                  <Edit3 className="h-4 w-4 text-cyan-400" />
+                  Pagos Anticipados
+                  <span className="text-xs text-cyan-400 font-normal">(editable)</span>
+                </TableHead>
                 <TableHead className="font-semibold text-gray-100">Interés</TableHead>
                 <TableHead className="font-semibold text-gray-100">Amortización</TableHead>
                 <TableHead className="font-semibold text-gray-100">Mensualidad Base</TableHead>
                 <TableHead className="font-semibold text-gray-100">Seguros</TableHead>
                 <TableHead className="font-semibold text-gray-100">Com. Admin</TableHead>
                 <TableHead className="font-semibold text-blue-400">Total Mensual</TableHead>
-                <TableHead className="font-semibold text-gray-100">Pagos Anticipados</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -394,6 +557,95 @@ function PaymentScheduleTable({ rows }: { rows: AmortizationRow[] }) {
                   </TableCell>
                   <TableCell className="font-mono text-sm text-gray-200">
                     ${row.openingBalance.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                  </TableCell>
+                  <TableCell className="font-mono text-sm text-cyan-400">
+                    {editingPrepayment === row.month ? (
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          value={prepaymentValues[row.month] || ''}
+                          onChange={(e) => handlePrepaymentInputChange(row.month, e.target.value)}
+                          onBlur={() => handlePrepaymentBlur(row.month)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handlePrepaymentBlur(row.month);
+                            }
+                            if (e.key === 'Escape') {
+                              setEditingPrepayment(null);
+                            }
+                          }}
+                          className="w-20 h-8 text-xs bg-gray-800 border-gray-600 text-cyan-400"
+                          autoFocus
+                          min="0"
+                          max={row.closingBalance}
+                          step="0.01"
+                          placeholder="0"
+                          title={`Máximo: $${row.closingBalance.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`}
+                        />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0 text-cyan-400 hover:text-cyan-300"
+                          onClick={() => handleCopyFromPrevious(row.month)}
+                          title="Copy from previous month"
+                        >
+                          {copiedMonth === row.month ? (
+                            <Check className="h-3 w-3 text-green-400" />
+                          ) : (
+                            <RotateCcw className="h-3 w-3" />
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0 text-red-400 hover:text-red-300"
+                          onClick={() => handleSetToZero(row.month)}
+                          title="Set to zero"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <div 
+                          className="cursor-pointer hover:bg-gray-700/50 px-2 py-1 rounded transition-colors border border-transparent hover:border-cyan-400/30 flex items-center gap-1"
+                          onClick={() => handlePrepaymentFocus(row.month)}
+                          title="Click to edit prepayment amount"
+                        >
+                          <Edit3 className="h-3 w-3 opacity-60" />
+                          ${row.prepayment.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                          {savingMonth === row.month && (
+                            <div className="ml-1 h-2 w-2 bg-green-400 rounded-full animate-pulse" title="Saving..."></div>
+                          )}
+                        </div>
+                        {index > 0 && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 text-cyan-400 hover:text-cyan-300 opacity-60 hover:opacity-100"
+                            onClick={() => handleCopyFromPrevious(row.month)}
+                            title="Copy from previous month"
+                          >
+                            {copiedMonth === row.month ? (
+                              <Check className="h-3 w-3 text-green-400" />
+                            ) : (
+                              <RotateCcw className="h-3 w-3" />
+                            )}
+                          </Button>
+                        )}
+                        {row.prepayment > 0 && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 text-red-400 hover:text-red-300 opacity-60 hover:opacity-100"
+                            onClick={() => handleSetToZero(row.month)}
+                            title="Set to zero"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="font-mono text-sm text-red-400">
                     ${row.interest.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
@@ -412,9 +664,6 @@ function PaymentScheduleTable({ rows }: { rows: AmortizationRow[] }) {
                   </TableCell>
                   <TableCell className="font-mono text-sm font-bold text-blue-300">
                     ${row.totalPayment.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                  </TableCell>
-                  <TableCell className="font-mono text-sm text-cyan-400">
-                    ${row.prepayment.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                   </TableCell>
                 </TableRow>
               ))}
