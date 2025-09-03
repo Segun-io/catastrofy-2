@@ -1,0 +1,14 @@
+import { createFileRoute } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/simulators/mortgage-test')({
+  component: MortgageTestPage,
+});
+
+function MortgageTestPage() {
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-3xl font-bold">Mortgage Test Page</h1>
+      <p>This is a test page to check if routing works.</p>
+    </div>
+  );
+}
