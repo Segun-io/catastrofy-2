@@ -13,9 +13,9 @@ export default defineConfig({
 		VitePWA({
 			registerType: "autoUpdate",
 			manifest: {
-				name: "catastrofy-2",
-				short_name: "catastrofy-2",
-				description: "catastrofy-2 - PWA Application",
+				name: "Catastrofy - Utilidades Financieras",
+				short_name: "Catastrofy",
+				description: "Catastrofy 2 - Suite de calculadoras financieras para decisiones informadas sobre tarjetas de crédito e hipotecas",
 				theme_color: "#0c0c0c",
 			},
 			pwaAssets: { disabled: false, config: true },
