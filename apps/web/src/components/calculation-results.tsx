@@ -152,6 +152,7 @@ export function CalculationResults({ result, isLoading }: CalculationResultsProp
         <CardContent>
           <PaymentScheduleTable 
             schedule={schedule} 
+            totals={totals}
             currency={input.currency} 
             locale={input.locale}
           />
@@ -199,10 +200,7 @@ export function CalculationResults({ result, isLoading }: CalculationResultsProp
               <span className="font-medium">Días ciclo:</span>
               <div>{input.cycleDays}</div>
             </div>
-            <div>
-              <span className="font-medium">Piso mínimo:</span>
-              <div>{formatCurrency(input.minPaymentFloor, input.currency, input.locale)}</div>
-            </div>
+
             <div>
               <span className="font-medium">Comisiones:</span>
               <div>{formatCurrency(input.feesPerCycle || 0, input.currency, input.locale)}</div>

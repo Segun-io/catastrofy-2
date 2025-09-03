@@ -12,20 +12,22 @@ import type {
 } from '@tanstack/react-table';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
 import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
-import type { PaymentScheduleItem } from '../lib/types';
+import type { PaymentScheduleItem, CalculationResult } from '../lib/types';
 import { formatCurrency, getLocaleLabels } from '../lib/utils/formatting';
 
 interface PaymentScheduleTableProps {
   schedule: PaymentScheduleItem[];
+  totals?: CalculationResult['totals'];
   currency?: string;
   locale?: string;
 }
 
 export function PaymentScheduleTable({ 
   schedule, 
+  totals,
   currency = 'MXN', 
   locale = 'es-MX' 
 }: PaymentScheduleTableProps) {
@@ -222,19 +224,28 @@ export function PaymentScheduleTable({
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  className={row.getValue('onlyInterestCovered') ? 'bg-yellow-50' : ''}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="text-xs">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              table.getRowModel().rows.map((row, rowIndex) => {
+                const isLastRow = rowIndex === table.getRowModel().rows.length - 1;
+                const isLastPage = table.getState().pagination.pageIndex === table.getPageCount() - 1;
+                const isLastPayment = isLastRow && isLastPage;
+                
+                return (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    className={`
+                      ${row.getValue('onlyInterestCovered') ? 'bg-yellow-50' : ''}
+                      ${isLastPayment ? 'bg-blue-100 border-l-4 border-blue-600 hover:bg-blue-100' : ''}
+                    `}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className={`text-xs ${isLastPayment ? 'font-semibold text-gray-900' : ''}`}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                );
+              })
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
@@ -243,6 +254,30 @@ export function PaymentScheduleTable({
               </TableRow>
             )}
           </TableBody>
+          {totals && table.getState().pagination.pageIndex === table.getPageCount() - 1 && (
+            <TableFooter>
+              <TableRow className="bg-muted/50 font-semibold">
+                <TableCell className="text-center font-bold">TOTALES</TableCell>
+                <TableCell className="font-mono text-muted-foreground">-</TableCell>
+                <TableCell className="font-mono text-orange-600">
+                  {formatCurrency(totals.totalInterest, currency, locale)}
+                </TableCell>
+                <TableCell className="font-mono text-red-600">
+                  {formatCurrency(totals.totalFees, currency, locale)}
+                </TableCell>
+                <TableCell className="font-mono text-green-600">
+                  {formatCurrency(totals.totalPaid, currency, locale)}
+                </TableCell>
+                <TableCell className="font-mono text-blue-600">
+                  {formatCurrency(totals.totalPrincipalPaid, currency, locale)}
+                </TableCell>
+                <TableCell className="font-mono text-muted-foreground">-</TableCell>
+                <TableCell className="text-center font-mono">
+                  {totals.months} meses
+                </TableCell>
+              </TableRow>
+            </TableFooter>
+          )}
         </Table>
       </div>
 
