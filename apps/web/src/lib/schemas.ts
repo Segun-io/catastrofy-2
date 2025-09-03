@@ -70,10 +70,6 @@ export const CalculationInputSchema = object({
     minValue(0, 'Minimum payment percent must be at least 0%'),
     maxValue(0.5, 'Minimum payment percent cannot exceed 50%')
   ),
-  minPaymentFloor: pipe(
-    number(),
-    minValue(0, 'Minimum payment floor must be at least 0')
-  ),
   feesPerCycle: optional(pipe(
     number(),
     minValue(0, 'Fees per cycle must be at least 0')
@@ -84,6 +80,11 @@ export const CalculationInputSchema = object({
   )),
   interestMethod: InterestMethodSchema,
   minPaymentFormula: MinPaymentFormulaSchema,
+  targetMonths: optional(pipe(
+    number(),
+    minValue(1, 'Target months must be at least 1'),
+    maxValue(600, 'Target months cannot exceed 600')
+  )),
   locale: optional(string()),
   currency: optional(string()),
   startDate: optional(string())
@@ -111,7 +112,10 @@ export const CalculationResultSchema = object({
   totals: object({
     months: number(),
     totalPaid: number(),
-    totalInterest: number()
+    totalInterest: number(),
+    totalFees: number(),
+    totalPrincipalPaid: number(),
+    finalBalance: number()
   }),
   createdAt: string()
 });

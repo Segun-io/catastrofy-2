@@ -22,11 +22,11 @@ export interface CalculationInput {
   dailyRate?: number; // optional; computed from apr / 365 if omitted
   cycleDays: number; // 28-31 typical
   minPaymentPercent: number; // decimal, e.g., 0.05 for 5%
-  minPaymentFloor: number;
   feesPerCycle?: number;
   newChargesPerCycle?: number;
   interestMethod: InterestMethod;
   minPaymentFormula: MinPaymentFormula;
+  targetMonths?: number; // Target months for payoff (default: 26)
   locale?: string; // e.g., 'es-MX'
   currency?: string; // e.g., 'MXN'
   startDate?: string; // ISO
@@ -53,6 +53,9 @@ export interface CalculationResult {
     months: number;
     totalPaid: number;
     totalInterest: number;
+    totalFees: number;
+    totalPrincipalPaid: number;
+    finalBalance: number;
   };
   createdAt: string;
 }
@@ -67,9 +70,9 @@ export interface Preset {
     | 'apr'
     | 'cycleDays'
     | 'minPaymentPercent'
-    | 'minPaymentFloor'
     | 'interestMethod'
     | 'minPaymentFormula'
+    | 'targetMonths'
   > & { 
     dailyRate?: number; 
     feesPerCycle?: number;
