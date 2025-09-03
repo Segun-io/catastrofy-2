@@ -89,3 +89,14 @@ export type MortgageResult = {
   rows: AmortizationRow[];
   totals: AmortizationTotals;
 };
+
+// Extended types for calculation management
+export interface MortgageCalculationResult {
+  id: string;
+  name: string;
+  presetId?: string;
+  input: Required<MortgageInput> & { principal: number };
+  rows: AmortizationRow[];
+  totals: AmortizationTotals;
+  createdAt: string;
+}
