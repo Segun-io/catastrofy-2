@@ -24,6 +24,20 @@ A modern React + TypeScript financial calculator suite built with TanStack Query
 - **History Management**: Save and manage multiple mortgage calculations
 - **Responsive UI**: Built with shadcn/ui components for a modern, accessible interface
 
+## Screenshots
+
+### Formulario principal de la calculadora de tarjetas
+![Credit Card Calculator Form](screenshots/credit-card-calculator-form.png)
+
+### Resultados con cronograma de pagos
+![Payment Schedule Results](screenshots/payment-schedule-results.png)
+
+### Simulador hipotecario
+![Mortgage Simulator](screenshots/mortgage-simulator.png)
+
+### Tabla de amortización detallada
+![Detailed Amortization Table](screenshots/detailed-amortization-table.png)
+
 ## Tech Stack
 
 - **Frontend**: React 19 + TypeScript (strict mode)
