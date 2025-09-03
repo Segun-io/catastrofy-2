@@ -20,13 +20,13 @@ function HomeComponent() {
 		<div className="container mx-auto max-w-3xl px-4 py-2">
 			{/* Mobile title - simple text */}
 			<div className="block sm:hidden text-center py-4">
-				<h1 className="text-2xl font-bold">CATASTROFY 2</h1>
+				<h1 className="text-2xl font-bold">CATASTROFY</h1>
 			</div>
 			{/* Desktop ASCII art */}
 			<pre className="hidden sm:block overflow-x-auto font-mono text-xs whitespace-pre-wrap break-all">{TITLE_TEXT}</pre>
 			<div className="grid gap-6">
 				<section className="rounded-lg border p-4">
-					<h2 className="mb-2 font-medium">Bienvenido a Catastrofy 2</h2>
+					<h2 className="mb-2 font-medium">Bienvenido a Catastrofy</h2>
 					<p className="text-muted-foreground mb-4">
 						Suite de calculadoras financieras para decisiones informadas sobre tarjetas de crédito e hipotecas.
 					</p>
